@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart, empty, filterbar, bars with context %}
+{% block title %}Operational{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Operational</h1><p class="muted">Where onboarding succeeds, stalls or fails.</p></div>{{ filterbar() }}</header>
+{% if not data %}{{ empty() }}{% else %}
+{% set k = data.kpi %}
+<div class="kpis">
+  {{ kpi('Total registrations', k.total|num, 'Onboarding attempts') }}
+  {{ kpi('Successful', k.registered|num) }}
+  {{ kpi('Failed', k.failed|num, tone='down') }}
+  {{ kpi('Completion rate', k.completion|pct, 'Did not abandon onboarding', na=('status' if k.completion is none else None)) }}
+  {{ kpi('Drop-off rate', k.dropoff|pct, 'Abandoned before finishing', na=('status' if k.dropoff is none else None), tone='warn') }}
+  {{ kpi('Total errors', k.errors|num, 'Verification errors', na=('status' if k.errors is none else None)) }}
+  {{ kpi('KYC pass rate', k.kyc_pass|pct, href=url_for('main.drill_kyc', market=market_id, days=days), na=('status' if k.kyc_pass is none else None)) }}
+</div>
+<div class="grid2">
+  <section class="panel"><h2>Top five errors</h2>
+    <table><thead><tr><th>Status</th><th class="num">Count</th><th class="num">Share</th></tr></thead><tbody>
+    {% for e in data.top_errors %}<tr><td>{{ e.label }}</td><td class="num">{{ e.count|num }}</td><td class="num">{{ e.share|pct }}</td></tr>{% else %}<tr><td colspan="3" class="muted">No error data.</td></tr>{% endfor %}
+    </tbody></table></section>
+  <section class="panel"><h2>Where applications ended</h2>{% for o in data.outcomes %}
+    <div class="bar-row"><span>{{ o.label }}</span><div class="bar"><i class="g-{{ o.key }}" style="width: {{ '%.1f'|format(o.count / (data.outcomes|sum(attribute='count')) * 100) }}%"></i></div><b>{{ o.count|num }}</b></div>
+    {% else %}<p class="muted">No status data.</p>{% endfor %}</section>
+  {{ chart('errorTrend', 'Error frequency over the last five days') }}
+  {{ chart('errorDist', 'Error distribution') }}
+  {% if data.stages %}{{ chart('stages', 'Stage-wise drop-off') }}
+  {% else %}<section class="panel"><h2>Stage-wise drop-off</h2><p class="muted">Your daily report does not say which onboarding stage customers abandon at. Upload <b>stage_dropoff</b> rows under <a href="{{ url_for('main.data_view') }}">Data sources</a>; stage names will match whatever you supply.</p></section>{% endif %}
+  {% if data.channels %}{{ chart('channels', 'Registrations by channel') }}
+  {% else %}<section class="panel"><h2>Registration channels</h2><p class="muted">Channel data is not in the daily report. Upload <b>channel_registrations</b> rows under <a href="{{ url_for('main.data_view') }}">Data sources</a>.</p></section>{% endif %}
+</div>
+<p><a href="{{ url_for('main.issues', market=market_id) }}">Review data validation findings</a></p>
+<script type="application/json" id="page-charts">{{ data.charts|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if data %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="{{ url_for('static', filename='js/charts.js') }}"></script>{% endif %}{% endblock %}

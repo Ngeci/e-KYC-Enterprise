@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Notifications</h1><p class="muted">Alerts, announcements and account messages.</p></div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('notify.inbox', show='unread' if show == 'all' else 'all') }}">{{ 'Show unread only' if show == 'all' else 'Show all' }}</a>
+    {% if unread_count %}<form method="post" action="{{ url_for('notify.read_all') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn" type="submit">Mark all as read</button></form>{% endif %}
+  </div></header>
+{% if current_user.role == 'admin' %}
+<section class="panel"><h2>Send an announcement</h2>
+  <form method="post" action="{{ url_for('notify.announce') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Title <input name="title" required maxlength="160"></label>
+    <label class="grow">Message <input name="message" required maxlength="1000"></label>
+    <label>Audience <select name="audience"><option value="all">Everyone</option>{% for r in roles %}<option value="{{ r }}">{{ r|capitalize }}s</option>{% endfor %}</select></label>
+    <label>Type <select name="category"><option value="announcement">Announcement</option><option value="alert">Operational alert</option></select></label>
+    <button class="btn" type="submit">Send</button>
+  </form></section>
+{% endif %}
+<section class="panel">
+  {% for n in rows %}
+  <article class="note-row {{ '' if n.id in read_ids else 'unread' }}">
+    <div><span class="tag {{ n.category }}">{{ n.category }}</span> <b>{{ n.title }}</b>
+      <p>{{ n.message }}</p>
+      <small class="muted">{{ n.created_at.strftime('%d %b %Y %H:%M') }} UTC{% if n.created_by %} · {{ n.created_by }}{% endif %}</small></div>
+    {% if n.id not in read_ids %}<form method="post" action="{{ url_for('notify.read_one', notification_id=n.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn ghost" type="submit">Mark as read</button></form>{% endif %}
+  </article>
+  {% else %}<p class="muted">{{ 'You are all caught up.' if show == 'unread' else 'No notifications yet.' }}</p>{% endfor %}
+</section>
+{% endblock %}

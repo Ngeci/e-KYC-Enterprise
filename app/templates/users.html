@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>User Management</h1></div>
+  <div class="actions"><a class="btn ghost" href="{{ url_for('admin.permissions') }}">Manage access permissions</a><a class="btn ghost" href="{{ url_for('admin.audit_log') }}">Audit log</a></div></header>
+<div class="grid2">
+<section class="panel"><h2>Add a user</h2>
+  <form method="post" action="{{ url_for('admin.create_user') }}" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Username <input name="username" required pattern="[a-z0-9._-]{3,50}"></label>
+    <label>Email <input name="email" type="email"></label>
+    <label>Role <select name="role">{% for r in roles %}<option value="{{ r }}">{{ r|capitalize }}</option>{% endfor %}</select></label>
+    <fieldset><legend>Markets (vendors only see the markets ticked here)</legend>
+      {% for m in markets %}<label class="check"><input type="checkbox" name="markets" value="{{ m.id }}"> {{ m.name }}</label>{% else %}<span class="muted small">No markets yet.</span>{% endfor %}</fieldset>
+    <p class="muted small">A one-time password is generated and the user must change it at first sign-in.</p>
+    <button class="btn" type="submit">Create user</button>
+  </form></section>
+<section class="panel"><h2>Add a market</h2>
+  <form method="post" action="{{ url_for('admin.add_market') }}" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Code <input name="code" required maxlength="10" placeholder="DRC"></label>
+    <label>Name <input name="name" required placeholder="Vodacom DRC"></label>
+    <label>Country <input name="country"></label>
+    <button class="btn" type="submit">Add market</button>
+  </form></section>
+</div>
+<section class="panel"><h2>Accounts</h2><div class="scroll"><table>
+  <thead><tr><th>User</th><th>Role</th><th>Markets</th><th>Last sign-in</th><th>State</th><th>Actions</th></tr></thead><tbody>
+  {% for u in users %}<tr>
+    <td>{{ u.username }}{% if u.email %}<div class="muted small">{{ u.email }}</div>{% endif %}</td>
+    <td>{{ u.role|capitalize }}</td>
+    <td>{{ u.markets|map(attribute='code')|join(', ') or ('all' if u.role != 'vendor' else 'none') }}</td>
+    <td class="nowrap">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'never' }}</td>
+    <td>{{ 'Active' if u.is_active else 'Deactivated' }}{% if u.is_locked() %}, locked{% endif %}{% if u.must_change_password %}<div class="muted small">password change due</div>{% endif %}</td>
+    <td class="actions">
+      <a class="btn ghost sm" href="{{ url_for('admin.edit_user', user_id=u.id) }}">Edit</a>
+      {% for action, label in (('reset', 'Reset password'), ('force-change', 'Force change'), ('unlock', 'Unlock'), ('disable' if u.is_active else 'enable', 'Deactivate' if u.is_active else 'Activate')) %}
+      <form method="post" action="{{ url_for('admin.user_action', user_id=u.id, action=action) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn ghost sm" type="submit">{{ label }}</button></form>
+      {% endfor %}
+      <details class="del"><summary class="btn ghost sm danger">Delete</summary>
+        <form method="post" action="{{ url_for('admin.delete_user', user_id=u.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="confirm" placeholder="Type {{ u.username }} to confirm" aria-label="Type the username to confirm" required>
+          <button class="btn sm danger-fill" type="submit">Delete user</button></form></details>
+    </td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="muted small">Deleting removes the person's access and personal details but keeps their audit history, as compliance records require.</p></section>
+{% endblock %}

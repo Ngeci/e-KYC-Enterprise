@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart, empty, filterbar with context %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h1>Dashboard</h1>
+    {% if scope.latest %}<p class="muted">Data through {{ scope.latest.strftime('%d %b %Y') }}. All figures come from imported reports.</p>{% endif %}</div>
+  {{ filterbar(show_grain=True) }}
+</header>
+{% if not data %}{{ empty() }}{% else %}
+{% set k = data.kpi %}
+<div class="kpis">
+  {{ kpi('Total registrations', k.total|num, 'Applications received') }}
+  {{ kpi('Registration growth', (k.growth|signed ~ '%') if k.growth is not none else '–', k.growth_basis or 'Needs at least two periods', tone=('up' if (k.growth or 0) >= 0 else 'down')) }}
+  {{ kpi('Success rate', k.rate|pct, k.registered|num ~ ' successful, ' ~ k.failed|num ~ ' not', href=url_for('main.drill_success', market=market_id, days=days)) }}
+  {{ kpi('Failed registrations', k.failed|num, 'Did not end in a customer', tone='down') }}
+  {{ kpi('Error count', k.errors|num, 'Verification errors', na=('status' if k.errors is none else None)) }}
+  {{ kpi('Lite accounts', k.lite|num) }}
+  {{ kpi('Premium accounts', k.premium|num) }}
+  {{ kpi('KYC pass rate', k.kyc_pass|pct, 'Full-KYC applications decided', href=url_for('main.drill_kyc', market=market_id, days=days), na=('status' if k.kyc_pass is none else None)) }}
+  {{ kpi('Completion rate', k.completion|pct, 'Did not abandon onboarding', na=('status' if k.completion is none else None)) }}
+  {{ kpi('Average registrations', k.avg_daily|num ~ ' / day', k.avg_monthly|num ~ ' per month · ' ~ k.avg_yearly|num ~ ' per year (' ~ k.days ~ ' days of data)') }}
+</div>
+<div class="grid2">
+  {{ chart('growth', 'Registration growth', note=grain_labels[grain] ~ ' totals with growth against the previous period.') }}
+  {{ chart('successFail', 'Successful versus unsuccessful registrations') }}
+  {{ chart('premiumLite', 'Premium versus Lite accounts') }}
+  {{ chart('trend', 'Registration trend over time') }}
+  {{ chart('errors', 'Error distribution', wide=True) }}
+</div>
+<script type="application/json" id="page-charts">{{ data.charts|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if data %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="{{ url_for('static', filename='js/charts.js') }}"></script>{% endif %}{% endblock %}

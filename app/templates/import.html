@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Import report{% endblock %}
+{% block content %}
+<header class="page-head"><h1>Import a daily health-check report</h1></header>
+<section class="panel narrow-left">
+  {% if not markets %}<p class="muted">No markets exist yet. An administrator must add one under Users and markets.</p>
+  {% else %}
+  <form method="post" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Market <select name="market" required>{% for m in markets %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></label>
+    <label>Report (.xlsx, max 10 MB) <input type="file" name="report" accept=".xlsx" required></label>
+    <p class="muted small">Re-importing a report refreshes the same days and never duplicates data. Findings you have acknowledged or resolved are kept.</p>
+    <button class="btn" type="submit">Import and validate</button>
+  </form>
+  {% endif %}
+</section>
+<section class="panel">
+  <h2>Recent imports</h2>
+  <table>
+    <thead><tr><th>When (UTC)</th><th>Market</th><th>File</th><th>By</th><th class="num">Days</th><th class="num">Findings</th></tr></thead>
+    <tbody>
+    {% for b in batches %}<tr><td class="nowrap">{{ b.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ b.market.code }}</td><td>{{ b.filename }}</td><td>{{ b.uploaded_by }}</td><td class="num">{{ b.metric_rows }}</td><td class="num">{{ b.issue_count }}</td></tr>
+    {% else %}<tr><td colspan="6" class="muted">Nothing imported yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

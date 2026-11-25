@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty, filterbar with context %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Reports</h1><p class="muted">Daily, weekly, monthly and yearly reporting from imported data.</p></div>
+  {% call filterbar(show_grain=True) %}<label>Report
+    <select name="kind">{% for key, label in kinds.items() %}<option value="{{ key }}" {{ 'selected' if key == kind }}>{{ label }}</option>{% endfor %}</select></label>{% endcall %}
+</header>
+{% if not data %}{{ empty() }}{% else %}
+<section class="panel">
+  <div class="panel-head"><h2>{{ data.title }}</h2>
+    <div class="actions">
+      <a class="btn ghost" href="{{ url_for('main.export_report', fmt='xlsx', kind=kind, grain=grain, market=market_id, days=days) }}">Download Excel</a>
+      <a class="btn ghost" href="{{ url_for('main.export_report', fmt='pdf', kind=kind, grain=grain, market=market_id, days=days) }}">Download PDF</a>
+    </div></div>
+  <div class="scroll"><table>
+    <thead><tr>{% for label, k in data.columns %}<th class="{{ 'num' if loop.index > 1 }}">{{ label }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in data.rows %}<tr>{% for value in row %}{% set kind_ = data.columns[loop.index0][1] %}<td class="{{ 'num' if loop.index > 1 }}">{{ fmt(value, kind_) }}</td>{% endfor %}</tr>
+    {% else %}<tr><td colspan="{{ data.columns|length }}" class="muted">No rows.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="muted small">Blank values ("-") mean the source report did not contain that data for the period.</p>
+</section>
+{% endif %}
+{% endblock %}

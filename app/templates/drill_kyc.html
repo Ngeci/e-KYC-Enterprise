@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty, filterbar with context %}
+{% block title %}KYC detail{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>KYC verification detail</h1><p class="muted">How verification outcomes are built from the status codes in the daily report.</p></div>{{ filterbar() }}</header>
+{% if not data %}<section class="panel"><h2>No status data</h2><p class="muted">KYC figures need the status breakdown sheet from the daily report.</p></section>
+{% else %}
+<div class="kpis">
+  <div class="kpi"><span class="kpi-label">KYC attempts</span><span class="kpi-value">{{ data.attempts|num }}</span><span class="kpi-sub">Reached a verification decision or review</span></div>
+  <div class="kpi"><span class="kpi-label">KYC pass rate</span><span class="kpi-value up">{{ data.pass_rate|pct }}</span><span class="kpi-sub">{{ data.passed|num }} passed</span></div>
+  <div class="kpi"><span class="kpi-label">KYC failure rate</span><span class="kpi-value down">{{ data.fail_rate|pct }}</span><span class="kpi-sub">{{ data.failed|num }} failed</span></div>
+  <div class="kpi"><span class="kpi-label">KYC compliance rate</span><span class="kpi-value">{{ data.compliance_rate|pct }}</span><span class="kpi-sub">Passed of those decided</span></div>
+  <div class="kpi"><span class="kpi-label">Outstanding</span><span class="kpi-value warn">{{ data.outstanding|num }}</span><span class="kpi-sub">Awaiting review or approval</span></div>
+  <div class="kpi"><span class="kpi-label">Not finished</span><span class="kpi-value">{{ data.abandoned|num }}</span><span class="kpi-sub">Customer abandoned onboarding</span></div>
+</div>
+<div class="grid2">
+{% for heading, rows in data.breakdown.items() %}
+  <section class="panel"><h2>{{ heading }}</h2><table><thead><tr><th>Status</th><th class="num">Count</th></tr></thead><tbody>
+  {% for code, label, n in rows %}<tr><td>{{ label }}</td><td class="num">{{ n|num }}</td></tr>{% else %}<tr><td colspan="2" class="muted">None in this period.</td></tr>{% endfor %}</tbody></table></section>
+{% endfor %}
+</div>
+<section class="panel"><h2>How these figures are defined</h2>
+  <p class="muted">"Passed" is the <i>Account created</i> status (full-KYC Premium accounts). "Failed" is every verification-error status plus <i>Rejected</i>. "Outstanding" is any application still in review or approval. Abandoned applications are excluded from attempts. Lite accounts do not have their own status in the report, so this view describes the full-KYC application flow. Confirm these definitions with your compliance team before quoting the rates externally. They live in <code>app/services/statuses.py</code>.</p></section>
+{% endif %}
+<p><a href="{{ url_for('main.dashboard', market=market_id, days=days) }}">Back to the dashboard</a></p>
+{% endblock %}

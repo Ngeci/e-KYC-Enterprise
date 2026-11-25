@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart, empty, filterbar with context %}
+{% block title %}Upgrade{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Upgrade</h1><p class="muted">The Lite-to-Premium pipeline: how many customers hold full accounts and what is waiting on approval.</p></div>{{ filterbar() }}</header>
+{% if not data %}{{ empty() }}{% else %}
+{% set k = data.kpi %}
+<div class="kpis">
+  {{ kpi('Lite accounts', k.lite|num) }}
+  {{ kpi('Premium accounts', k.premium|num) }}
+  {{ kpi('Premium share', k.share|pct, 'Of registered customers') }}
+  {{ kpi('Premium-to-Lite ratio', k.ratio|dec(2)) }}
+  {{ kpi('Waiting for review or approval', k.waiting|num, 'System approving, manual review, G2 approval', tone='warn', na=('status' if k.waiting is none else None)) }}
+</div>
+<div class="grid2">
+  <section class="panel"><h2>Approval pipeline</h2>
+    <table><thead><tr><th>Stage</th><th class="num">Applications</th></tr></thead><tbody>
+    {% for code, label, n in data.pipeline %}<tr><td>{{ label }}</td><td class="num">{{ n|num }}</td></tr>{% else %}<tr><td colspan="2" class="muted">No status data imported.</td></tr>{% endfor %}
+    </tbody></table>
+    <p class="muted small">Premium accounts are created when an application reaches the "Account created" status. Applications stuck before it are the upgrade opportunity.</p></section>
+  {{ chart('share', 'Premium share of registrations') }}
+  {% if data.has_status %}{{ chart('backlog', 'Accounts created versus waiting for G2 approval', wide=True) }}{% endif %}
+</div>
+<script type="application/json" id="page-charts">{{ data.charts|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if data %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="{{ url_for('static', filename='js/charts.js') }}"></script>{% endif %}{% endblock %}

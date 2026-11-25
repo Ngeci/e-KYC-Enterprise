@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart, empty, filterbar with context %}
+{% block title %}Monetization{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Monetization</h1><p class="muted">How registrations translate into business value.</p></div>{{ filterbar() }}</header>
+{% if not data %}{{ empty() }}{% else %}
+{% set k = data.kpi %}
+<div class="kpis">
+  {{ kpi('Lite accounts', k.lite|num) }}
+  {{ kpi('Premium accounts', k.premium|num) }}
+  {{ kpi('Premium-to-Lite ratio', k.ratio|dec(2), (k.premium_share|pct) ~ ' of registered customers are Premium') }}
+  {{ kpi('Registered customers', k.customers|num, 'Customer growth in this period') }}
+  {{ kpi('Customer acquisition cost', k.cac|dec(2), 'Spend per registered customer', na=('acquisition cost' if k.cac is none else None)) }}
+  {{ kpi('Avg transactions per customer', k.avg_tx|dec(2), 'Transactions per registered customer in the period', na=('transaction' if k.avg_tx is none else None)) }}
+  {{ kpi('Favourite product', k.favourite, 'Most customers on the latest date', na=('product' if not k.favourite else None)) }}
+</div>
+<div class="grid2">
+  {{ chart('customerGrowth', 'Customer growth') }}
+  {{ chart('distribution', 'Customer account distribution') }}
+  {{ chart('overTime', 'Monetization performance over time', note='New Premium and Lite accounts per day.') }}
+  {% if data.products %}{{ chart('adoption', 'Product adoption trends') }}
+  {% else %}<section class="panel"><h2>Product adoption trends</h2><p class="muted">No product data yet. Upload <b>product_customers</b> rows under <a href="{{ url_for('main.data_view') }}">Data sources</a> to see adoption and the favourite product.</p></section>{% endif %}
+</div>
+{% if data.products %}<section class="panel"><h2>Customers by product</h2>
+  <table><thead><tr><th>Product</th><th class="num">Customers</th></tr></thead><tbody>{% for name, n in data.products %}<tr><td>{{ name }}</td><td class="num">{{ n|num }}</td></tr>{% endfor %}</tbody></table></section>{% endif %}
+<script type="application/json" id="page-charts">{{ data.charts|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if data %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="{{ url_for('static', filename='js/charts.js') }}"></script>{% endif %}{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Access permissions{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Access permissions</h1><p class="muted">Choose which modules each role can open. Administrators always have full access, and User Management stays admin-only.</p></div></header>
+<section class="panel"><form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="scroll"><table class="matrix">
+    <thead><tr><th>Module</th>{% for r in roles %}<th>{{ r|capitalize }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for key, label in grantable %}<tr><th scope="row">{{ label }}</th>
+      {% for r in roles %}<td><input type="checkbox" name="{{ r }}:{{ key }}" aria-label="{{ r }} can open {{ label }}" {{ 'checked' if key in matrix[r] }}></td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="actions"><button class="btn" type="submit">Save permissions</button><a class="btn ghost" href="{{ url_for('admin.users') }}">Back</a></div>
+</form></section>
+{% endblock %}

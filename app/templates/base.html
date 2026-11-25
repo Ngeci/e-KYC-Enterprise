@@ -1,0 +1,74 @@
+{% from "_macros.html" import icon %}
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} · e-KYC Dashboard</title>
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+{% if current_user %}
+<div class="shell">
+  <nav class="rail" aria-label="Main navigation">
+    <div class="brand"><span class="mark">e</span><span class="label">e-KYC Dashboard</span></div>
+    <div class="rail-links">
+    {% for key, label, endpoint in nav %}
+      <a href="{{ url_for(endpoint) }}" class="{{ 'on' if request.endpoint == endpoint or (key == 'operational' and request.endpoint == 'main.issues') }}" title="{{ label }}">
+        {{ icon(key) }}<span class="label">{{ label }}</span>
+        {% if key == 'notifications' and unread_count %}<em class="badge">{{ unread_count }}</em>{% endif %}
+      </a>
+    {% endfor %}
+    </div>
+    <form method="post" action="{{ url_for('auth.logout') }}" class="rail-foot">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn-logout" title="Log out">{{ icon('logout') }}<span class="label">Log out</span></button>
+    </form>
+  </nav>
+  <div class="main">
+    <header class="topbar">
+      <button type="button" id="rail-toggle" class="icon-btn" aria-label="Collapse or expand the sidebar">{{ icon('menu') }}</button>
+      <div class="welcome">Welcome back, {{ current_user.username }}!</div>
+      <div class="top-actions">
+        <button type="button" id="theme-toggle" class="icon-btn" aria-label="Switch between dark and light mode">{{ icon('moon') }}</button>
+        <details class="drop">
+          <summary class="icon-btn" aria-label="Notifications ({{ unread_count }} unread)">{{ icon('notifications') }}{% if unread_count %}<em class="badge pin">{{ unread_count }}</em>{% endif %}</summary>
+          <div class="drop-panel">
+            <div class="drop-head"><b>Notifications</b>
+              {% if unread_count %}<form method="post" action="{{ url_for('notify.read_all') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="linkbtn" type="submit">Mark all read</button></form>{% endif %}</div>
+            {% for n, was_read in recent_notifications %}
+              <div class="note {{ '' if was_read else 'unread' }}"><b>{{ n.title }}</b><span>{{ n.message[:110] }}{{ '…' if n.message|length > 110 }}</span><small>{{ n.created_at.strftime('%d %b %H:%M') }}</small></div>
+            {% else %}<p class="muted pad">You have no notifications.</p>{% endfor %}
+            <a class="drop-foot" href="{{ url_for('notify.inbox') }}">View all notifications</a>
+          </div>
+        </details>
+        <details class="drop">
+          <summary class="profile" aria-label="Profile"><span class="avatar">{{ current_user.username[0]|upper }}</span><span class="who"><b>{{ current_user.username }}</b><small>{{ current_user.role|capitalize }}</small></span></summary>
+          <div class="drop-panel narrow">
+            <dl class="profile-card">
+              <dt>Username</dt><dd>{{ current_user.username }}</dd>
+              <dt>Role</dt><dd>{{ current_user.role|capitalize }}</dd>
+              <dt>Email</dt><dd>{{ current_user.email or 'Not set' }}</dd>
+              <dt>Markets</dt><dd>{{ current_user.markets|map(attribute='name')|join(', ') if current_user.role == 'vendor' else 'All markets' }}</dd>
+              <dt>Last sign-in</dt><dd>{{ current_user.last_login_at.strftime('%d %b %Y %H:%M') if current_user.last_login_at else 'First sign-in' }}</dd>
+            </dl>
+            <a class="drop-foot" href="{{ url_for('main.settings') }}">Profile and settings</a>
+          </div>
+        </details>
+      </div>
+    </header>
+    <main class="content">
+{% else %}
+  <main class="solo">
+{% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+    </main>
+{% if current_user %}  </div>
+</div>{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

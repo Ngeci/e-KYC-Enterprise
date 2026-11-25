@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty, filterbar with context %}
+{% block title %}Success rate detail{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Success rate detail</h1><p class="muted">The successful and unsuccessful registrations behind the success rate.</p></div>{{ filterbar() }}</header>
+{% if not data %}{{ empty() }}{% else %}
+{% set t = data.totals %}
+<div class="kpis three">
+  <div class="kpi"><span class="kpi-label">Successful registrations</span><span class="kpi-value up">{{ t.registered|num }}</span><span class="kpi-sub">{{ t.premium|num }} Premium and {{ t.lite|num }} Lite</span></div>
+  <div class="kpi"><span class="kpi-label">Unsuccessful registrations</span><span class="kpi-value down">{{ t.not_registered|num }}</span></div>
+  <div class="kpi"><span class="kpi-label">Success rate</span><span class="kpi-value">{{ t.rate|pct }}</span><span class="kpi-sub">{{ t.registered|num }} of {{ t.total|num }} applications</span></div>
+</div>
+<section class="panel"><h2>Day by day</h2><div class="scroll"><table>
+  <thead><tr><th>Date</th><th class="num">Applications</th><th class="num">Premium</th><th class="num">Lite</th><th class="num">Successful</th><th class="num">Unsuccessful</th><th class="num">Success rate</th></tr></thead>
+  <tbody>{% for b in data.rows %}<tr><td>{{ b.label }}</td><td class="num">{{ b.total|num }}</td><td class="num">{{ b.premium|num }}</td><td class="num">{{ b.lite|num }}</td><td class="num">{{ b.registered|num }}</td><td class="num">{{ b.not_registered|num }}</td><td class="num">{{ b.rate|pct }}</td></tr>{% endfor %}</tbody>
+</table></div></section>
+{% endif %}
+<p><a href="{{ url_for('main.dashboard', market=market_id, days=days) }}">Back to the dashboard</a></p>
+{% endblock %}

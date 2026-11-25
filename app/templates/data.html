@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Data sources{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Data sources</h1><p class="muted">Excel reports and business data feed every dashboard. Nothing is estimated.</p></div></header>
+<div class="grid2">
+<section class="panel">
+  <h2>Daily health-check report (Excel)</h2>
+  {% if not markets %}<p class="muted">No markets exist yet. An administrator must add one under User Management.</p>
+  {% else %}
+  <form method="post" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Market <select name="market" required>{% for m in markets %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></label>
+    <label>Report (.xlsx, max 10 MB) <input type="file" name="report" accept=".xlsx" required></label>
+    <p class="muted small">Re-importing refreshes the same days and never duplicates data. Validation runs automatically and staff are notified of critical findings.</p>
+    <button class="btn" type="submit">Import and validate</button>
+  </form>{% endif %}
+</section>
+<section class="panel">
+  <h2>Business data (CSV)</h2>
+  <p class="muted">Acquisition cost, transactions, satisfaction, channels, onboarding stages and products are not in the daily report. Upload them here and the matching dashboard cards switch on.</p>
+  <form method="post" action="{{ url_for('main.upload_extra') }}" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>CSV file <input type="file" name="extra" accept=".csv" required></label>
+    <div class="actions"><button class="btn" type="submit">Upload data</button>
+      <a class="btn ghost" href="{{ url_for('main.extra_template') }}">Download template</a></div>
+  </form>
+  <table class="compact"><thead><tr><th>Metric</th><th>Meaning</th><th class="num">Rows</th></tr></thead><tbody>
+  {% for name, (needs_dim, help) in extra_metrics.items() %}<tr><td><code>{{ name }}</code></td><td>{{ help }}</td><td class="num">{{ extra_counts.get(name, 0) }}</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+</div>
+<section class="panel"><h2>Recent report imports</h2>
+  <table><thead><tr><th>When (UTC)</th><th>Market</th><th>File</th><th>By</th><th class="num">Days</th><th class="num">Findings</th></tr></thead><tbody>
+  {% for b in batches %}<tr><td class="nowrap">{{ b.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ b.market.code }}</td><td>{{ b.filename }}</td><td>{{ b.uploaded_by }}</td><td class="num">{{ b.metric_rows }}</td><td class="num">{{ b.issue_count }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Nothing imported yet.</td></tr>{% endfor %}</tbody></table>
+</section>
+{% endblock %}

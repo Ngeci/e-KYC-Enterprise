@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart, empty, filterbar with context %}
+{% block title %}Executive{% endblock %}
+{% block content %}
+<header class="page-head"><div><h1>Executive</h1><p class="muted">Business performance, growth and compliance.</p></div>{{ filterbar() }}</header>
+{% if not data %}{{ empty() }}{% else %}
+{% set k = data.kpi %}
+<section class="panel summary"><h2>Performance summary</h2><ul>{% for line in data.summary %}<li>{{ line }}</li>{% endfor %}</ul></section>
+<div class="kpis">
+  {{ kpi('Total registrations', k.total|num) }}
+  {{ kpi('Growth rate', (k.growth|signed ~ '%') if k.growth is not none else '–', k.growth_basis or 'Needs at least two days', tone=('up' if (k.growth or 0) >= 0 else 'down')) }}
+  {{ kpi('Success rate', k.rate|pct, ((k.rate_delta|signed ~ ' pts vs previous period') if k.rate_delta is not none else 'No earlier period to compare'), href=url_for('main.drill_success', market=market_id, days=days)) }}
+  {{ kpi('Failed registrations', k.failed|num, tone='down') }}
+  {{ kpi('Avg monthly registrations', k.avg_monthly|num, 'Over ' ~ k.months ~ ' month(s) of data') }}
+  {{ kpi('Avg yearly registrations', k.avg_yearly|num, 'Over ' ~ k.years ~ ' year(s) of data') }}
+  {{ kpi('Customer acquisition cost', k.cac|dec(2), 'Spend per registered customer', na=('acquisition cost' if k.cac is none else None)) }}
+  {{ kpi('KYC pass rate', k.kyc_pass|pct, href=url_for('main.drill_kyc', market=market_id, days=days), na=('status' if k.kyc_pass is none else None)) }}
+  {{ kpi('KYC compliance rate', k.kyc_compliance|pct, 'Passed of those decided', na=('status' if k.kyc_compliance is none else None)) }}
+  {{ kpi('Customer satisfaction', k.satisfaction|stars, na=('satisfaction survey' if k.satisfaction is none else None)) }}
+  {{ kpi('Premium-to-Lite ratio', k.ratio|dec(2), 'Premium per Lite account') }}
+</div>
+<div class="grid2">
+  <section class="panel"><h2>Last five days</h2>
+    <table><thead><tr><th>Date</th><th class="num">Applications</th><th class="num">Successful</th><th class="num">Rate</th><th class="num">Errors</th><th class="num">Growth</th></tr></thead><tbody>
+    {% for b in data.last5 %}<tr><td>{{ b.label }}</td><td class="num">{{ b.total|num }}</td><td class="num">{{ b.registered|num }}</td><td class="num">{{ b.rate|pct }}</td><td class="num">{{ b.errors|num }}</td><td class="num">{{ (b.growth|signed ~ '%') if b.growth is not none else '–' }}</td></tr>{% endfor %}
+    </tbody></table></section>
+  {{ chart('last5', 'Last five days: successful versus unsuccessful') }}
+</div>
+<div class="grid2">
+  <section class="panel"><h2>Growth comparisons</h2>
+    <table><thead><tr><th>Comparison</th><th class="num">Current</th><th class="num">Previous</th><th class="num">Change</th></tr></thead><tbody>
+    {% for c in data.comparisons %}<tr><td>{{ c.label }}<div class="muted small">{{ c.basis or 'Not enough history' }}</div></td><td class="num">{{ c.value|num }}</td><td class="num">{{ c.prev|num }}</td>
+      <td class="num">{% if c.prev %}{{ ((c.value - c.prev) / c.prev * 100)|signed }}%{% else %}–{% endif %}</td></tr>{% endfor %}
+    </tbody></table></section>
+  <section class="panel"><h2>Top five registration errors</h2>
+    <table><thead><tr><th>Status</th><th class="num">Count</th><th class="num">Share</th></tr></thead><tbody>
+    {% for e in data.top_errors %}<tr><td>{{ e.label }}</td><td class="num">{{ e.count|num }}</td><td class="num">{{ e.share|pct }}</td></tr>{% else %}<tr><td colspan="3" class="muted">No error data.</td></tr>{% endfor %}
+    </tbody></table></section>
+</div>
+<div class="grid2">
+  <section class="panel"><h2>Monthly performance</h2>
+    <table><thead><tr><th>Month</th><th class="num">Applications</th><th class="num">Successful</th><th class="num">Rate</th><th class="num">Growth</th></tr></thead><tbody>
+    {% for b in data.monthly %}<tr><td>{{ b.label }}{% if b.days < 28 %}<div class="muted small">{{ b.days }} days of data</div>{% endif %}</td><td class="num">{{ b.total|num }}</td><td class="num">{{ b.registered|num }}</td><td class="num">{{ b.rate|pct }}</td><td class="num">{{ (b.growth|signed ~ '%') if b.growth is not none else '–' }}</td></tr>{% endfor %}
+    </tbody></table></section>
+  <section class="panel"><h2>Yearly performance</h2>
+    <table><thead><tr><th>Year</th><th class="num">Applications</th><th class="num">Successful</th><th class="num">Rate</th><th class="num">Growth</th></tr></thead><tbody>
+    {% for b in data.yearly %}<tr><td>{{ b.label }}</td><td class="num">{{ b.total|num }}</td><td class="num">{{ b.registered|num }}</td><td class="num">{{ b.rate|pct }}</td><td class="num">{{ (b.growth|signed ~ '%') if b.growth is not none else '–' }}</td></tr>{% endfor %}
+    </tbody></table></section>
+</div>
+<section class="panel"><h2>Market comparison</h2>
+  {% if data.markets|length < 2 %}<p class="muted">Only one market has data for this selection. Import reports for other markets to compare them here.</p>{% endif %}
+  <table><thead><tr><th>Market</th><th class="num">Applications</th><th class="num">Successful</th><th class="num">Unsuccessful</th><th class="num">Success rate</th></tr></thead><tbody>
+  {% for r in data.markets %}<tr><td>{{ r.market }}</td><td class="num">{{ r.total|num }}</td><td class="num">{{ r.registered|num }}</td><td class="num">{{ r.not_registered|num }}</td><td class="num">{{ r.rate|pct }}</td></tr>{% endfor %}
+  </tbody></table></section>
+<script type="application/json" id="page-charts">{{ data.charts|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if data %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="{{ url_for('static', filename='js/charts.js') }}"></script>{% endif %}{% endblock %}
